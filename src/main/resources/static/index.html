@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD Alunos</title>
+</head>
+<body>
+<h1>Cadastro de Alunos</h1>
+<form id="alunoForm">
+    <input type="number" id="id" placeholder="ID"><br>
+    <input type="text" id="nome" placeholder="Nome"><br>
+    <input type="text" id="matricula" placeholder="Matrícula"><br>
+    <input type="text" id="curso" placeholder="Curso"><br>
+    <input type="number" id="idade" placeholder="Idade"><br>
+    <input type="email" id="email" placeholder="Email"><br>
+    <input type="text" id="telefone" placeholder="Telefone"><br>
+    <button type="button" onclick="addAluno()">Adicionar</button>
+</form>
+
+<h2>Lista de Alunos</h2>
+<ul id="listaAlunos"></ul>
+
+<script>
+    async function getAlunos() {
+        const response = await fetch('/alunos');
+        const alunos = await response.json();
+        let lista = document.getElementById('listaAlunos');
+        lista.innerHTML = '';
+        alunos.forEach(a => {
+            let li = document.createElement('li');
+            li.innerText = `${a.id} - ${a.nome} (${a.curso})`;
+            lista.appendChild(li);
+        });
+    }
+
+    async function addAluno() {
+        const aluno = {
+            id: document.getElementById("id").value,
+            nome: document.getElementById("nome").value,
+            matricula: document.getElementById("matricula").value,
+            curso: document.getElementById("curso").value,
+            idade: document.getElementById("idade").value,
+            email: document.getElementById("email").value,
+            telefone: document.getElementById("telefone").value
+        };
+
+        await fetch('/alunos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(aluno)
+        });
+
+        await getAlunos();
+    }
+
+    getAlunos();
+</script>
+</body>
+</html>
