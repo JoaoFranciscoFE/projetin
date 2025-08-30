@@ -3,39 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <title>CRUD Alunos</title>
+    <style>
+        body { font-family: sans-serif; }
+        input { margin-bottom: 5px; width: 200px; padding: 4px; }
+        button { margin-right: 5px; }
+        li { margin-bottom: 10px; }
+        .actions { margin-left: 20px; }
+    </style>
 </head>
 <body>
 <h1>Cadastro de Alunos</h1>
 <form id="alunoForm">
-    <input type="number" id="id" placeholder="ID"><br>
+    <input type="hidden" id="id">
+
+    <input type="number" id="idForm" placeholder="ID"><br>
     <input type="text" id="nome" placeholder="Nome"><br>
     <input type="text" id="matricula" placeholder="Matrícula"><br>
     <input type="text" id="curso" placeholder="Curso"><br>
     <input type="number" id="idade" placeholder="Idade"><br>
     <input type="email" id="email" placeholder="Email"><br>
     <input type="text" id="telefone" placeholder="Telefone"><br>
-    <button type="button" onclick="addAluno()">Adicionar</button>
+    <button type="button" onclick="saveAluno()">Salvar</button>
+    <button type="button" onclick="clearForm()">Cancelar</button>
 </form>
 
 <h2>Lista de Alunos</h2>
 <ul id="listaAlunos"></ul>
 
 <script>
-    async function getAlunos() {
-        const response = await fetch('/alunos');
-        const alunos = await response.json();
-        let lista = document.getElementById('listaAlunos');
-        lista.innerHTML = '';
-        alunos.forEach(a => {
-            let li = document.createElement('li');
-            li.innerText = `${a.id} - ${a.nome} (${a.curso})`;
-            lista.appendChild(li);
-        });
+    // URL base da API
+    const apiUrl = '/alunos';
+
+    // Limpa o formulário e reseta seu estado para "Adicionar".
+
+    function clearForm() {
+        document.getElementById("id").value = ''; // Limpa o ID oculto
+        document.getElementById("idForm").value = '';
+        document.getElementById("idForm").disabled = false; // Habilita o campo ID
+        document.getElementById("nome").value = '';
+        document.getElementById("matricula").value = '';
+        document.getElementById("curso").value = '';
+        document.getElementById("idade").value = '';
+        document.getElementById("email").value = '';
+        document.getElementById("telefone").value = '';
     }
 
-    async function addAluno() {
+    // Busca todos os alunos no backend e atualiza a lista na tela.
+
+    async function getAlunos() {
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error('Erro ao buscar alunos');
+            }
+            const alunos = await response.json();
+            const lista = document.getElementById('listaAlunos');
+            lista.innerHTML = ''; // Limpa a lista antes de preencher
+
+            alunos.forEach(aluno => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${aluno.id} - ${aluno.nome} (${aluno.curso})</span>
+                    <span class="actions">
+                        <button onclick='startEdit(${JSON.stringify(aluno)})'>Editar</button>
+                        <button onclick="deleteAluno(${aluno.id})">Excluir</button>
+                    </span>
+                `;
+                lista.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Falha ao carregar alunos:", error);
+            alert("Não foi possível carregar a lista de alunos.");
+        }
+    }
+
+    function startEdit(aluno) {
+        // Preenche o campo de ID oculto para indicar o modo de edição
+        document.getElementById("id").value = aluno.id;
+
+        // Preenche o formulário com os dados do aluno
+        document.getElementById("idForm").value = aluno.id;
+        document.getElementById("idForm").disabled = true;
+        document.getElementById("nome").value = aluno.nome;
+        document.getElementById("matricula").value = aluno.matricula;
+        document.getElementById("curso").value = aluno.curso;
+        document.getElementById("idade").value = aluno.idade;
+        document.getElementById("email").value = aluno.email;
+        document.getElementById("telefone").value = aluno.telefone;
+    }
+
+    // Decide entre criar ou atualizar na presença de um ID no campo oculto.
+    async function saveAluno() {
+        const id = document.getElementById("id").value;
+        const idForm = document.getElementById("idForm").value;
+
         const aluno = {
-            id: document.getElementById("id").value,
+            id: idForm,
             nome: document.getElementById("nome").value,
             matricula: document.getElementById("matricula").value,
             curso: document.getElementById("curso").value,
@@ -44,15 +107,53 @@
             telefone: document.getElementById("telefone").value
         };
 
-        await fetch('/alunos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(aluno)
-        });
+        const isUpdating = id !== '';
+        const url = isUpdating ? `${apiUrl}/${id}` : apiUrl;
+        const method = isUpdating ? 'PUT' : 'POST';
 
-        await getAlunos();
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(aluno)
+            });
+
+            const resultText = await response.text();
+            alert(resultText);
+            // Mostra a resposta do servidor (ex: "Aluno adicionado com sucesso!")
+
+            if (response.ok) {
+                clearForm();
+                getAlunos();
+            }
+        } catch (error) {
+            console.error("Erro ao salvar aluno:", error);
+            alert("Ocorreu um erro ao salvar o aluno.");
+        }
     }
 
+    // Deleta um aluno pelo ID.
+    async function deleteAluno(id) {
+        if (confirm(`Tem certeza que deseja excluir o aluno com ID ${id}?`)) {
+            try {
+                const response = await fetch(`${apiUrl}/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const resultText = await response.text();
+                alert(resultText);
+
+                if (response.ok) {
+                    getAlunos();
+                }
+            } catch (error) {
+                console.error("Erro ao deletar aluno:", error);
+                alert("Ocorreu um erro ao deletar o aluno.");
+            }
+        }
+    }
+
+    // Carrega a lista de alunos ao iniciar a página
     getAlunos();
 </script>
 </body>
