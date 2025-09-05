@@ -1,78 +1,64 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.Aluno;
+import com.example.demo.repository.AlunoRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequestMapping("/alunos")
 public class alunoController {
-    private List<Aluno> alunos = new ArrayList<>();
+
+    private final AlunoRepository alunoRepository;
+
+    public alunoController(AlunoRepository alunoRepository) {
+        this.alunoRepository = alunoRepository;
+    }
 
     @PostMapping
-    public String addAluno(@RequestBody Aluno aluno) {
-        for (Aluno a : alunos) {
-            if (a.getId() == aluno.getId()) {
-                return "Erro: ID já existe!";
-            }
+    public ResponseEntity<String> addAluno(@RequestBody Aluno aluno) {
+        if (alunoRepository.findById(aluno.getId()).isPresent()) {
+            return ResponseEntity.badRequest().body("Erro: ID do aluno já existe!");
         }
-        alunos.add(aluno);
-        return "Aluno adicionado com sucesso!";
+        alunoRepository.save(aluno);
+        return ResponseEntity.ok("Aluno adicionado com sucesso!");
     }
 
     @GetMapping
     public List<Aluno> getAll() {
-        return alunos;
+        return alunoRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    public Aluno getById(@PathVariable int id) {
-        return alunos.stream()
-                .filter(a -> a.getId() == id)
-                .findFirst()
-                .orElse(null);
+    public ResponseEntity<Aluno> getById(@PathVariable int id) {
+        return alunoRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/busca")
     public List<Aluno> buscarPorNome(@RequestParam String nome) {
-        List<Aluno> resultado = new ArrayList<>();
-        for (Aluno a : alunos) {
-            if (a.getNome().toLowerCase().contains(nome.toLowerCase())) {
-                resultado.add(a);
-            }
-        }
-        return resultado;
+        return alunoRepository.findByName(nome);
     }
 
     @PutMapping("/{id}")
-    public String updateAluno(@PathVariable int id, @RequestBody Aluno novoAluno) {
-        for (Aluno a : alunos) {
-            if (a.getId() == id) {
-                a.setNome(novoAluno.getNome());
-                a.setMatricula(novoAluno.getMatricula());
-                a.setCurso(novoAluno.getCurso());
-                a.setIdade(novoAluno.getIdade());
-                a.setEmail(novoAluno.getEmail());
-                a.setTelefone(novoAluno.getTelefone());
-                return "Aluno atualizado com sucesso!";
-            }
+    public ResponseEntity<String> updateAluno(@PathVariable int id, @RequestBody Aluno novoAluno) {
+        if (alunoRepository.findById(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
-        return "Aluno não encontrado!";
+        novoAluno.setId(id);
+        alunoRepository.update(novoAluno);
+        return ResponseEntity.ok("Aluno atualizado com sucesso!");
     }
 
     @DeleteMapping("/{id}")
-    public String deleteAluno(@PathVariable int id) {
-        Aluno aluno = alunos.stream()
-                .filter(a -> a.getId() == id)
-                .findFirst()
-                .orElse(null);
-
-        if (aluno != null) {
-            alunos.remove(aluno);
-            return "Aluno removido com sucesso!";
+    public ResponseEntity<String> deleteAluno(@PathVariable int id) {
+        if (alunoRepository.findById(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
-        return "Aluno não encontrado!";
+        alunoRepository.delete(id);
+        return ResponseEntity.ok("Aluno removido com sucesso!");
     }
 }
